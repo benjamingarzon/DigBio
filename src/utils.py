@@ -22,3 +22,19 @@ def UTC2epoch(x):
 def read_hr_file(filename):
     ff = pd.read_csv(filename, skiprows=5, delimiter=',')
     return ff
+    
+def compute_metrics(cm):    
+    tn, fp, fn, tp = cm.ravel()
+    pos = tp+fn
+    neg = tn+fp
+    precision = tp/(tp+fp)
+    recall = tp/pos
+    sensitivity = recall
+    specificity = tn/neg
+    balanced_acc = 0.5*(tp/pos + tn/neg)
+    f1 = 2*(precision*recall)/(precision + recall)
+    print("Confusion matrix:")
+    print(cm)
+    print(f"Precision = {precision:.3f}, Recall = {recall:.3f}, F1 = {f1:.3f}")
+    print(f"Sensitivity = {sensitivity:.3f}, Specificity =  {specificity:.3f}")
+    print(f"Balanced accuracy =  {balanced_acc:.3f}")
