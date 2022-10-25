@@ -1,0 +1,71 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# Modify these file paths
+DATA_FILE = 'C:/Users/Garzon/Documents/Projects/DigBio/data/s2/Participant_1_converted.csv'
+FEAT_FILE = 'C:/Users/Garzon/Documents/Projects/DigBio/data/Features.xlsx'
+```
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
+list.of.packages <- c("readxl", "qgraph","dplyr", "knitr")
+
+new.packages <-
+  list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])]
+if (length(new.packages)) install.packages(new.packages)
+lapply(list.of.packages, require, character.only = TRUE)
+
+mydata = read.csv(DATA_FILE)
+mydata = mydata %>% select(order(colnames(mydata)))
+feature_data = read_xlsx(FEAT_FILE)
+toremove = c("calendar_date", 
+             "local_start_time_sleep", 
+             "local_end_time_sleep", 
+             "local_start_time_awake", 
+             "local_end_time_awake", 
+             "estimated_sleep_time")
+
+# remove constant features
+X = mydata
+X[toremove] = NULL
+sds = apply(X, 2, sd)
+X = X[sds != 0]
+
+feature_data$Feature = gsub('%', 'X.', feature_data$Feature)
+feature_data = feature_data%>%filter(Feature %in% colnames(X))%>% arrange(Feature)
+feature_data$Number = seq(dim(feature_data)[1])
+
+CorMat <- cor_auto(X)
+feature_data$label = paste(feature_data$`Sub-category`,  feature_data$`Main category`, sep = '-')
+
+feature_groups = feature_data$label
+
+```
+
+# Plot network
+
+```{r, fig.width=15}
+qgraph(CorMat, title = "Correlation network",
+       maximum = 1, 
+       cut = 0.2, 
+       minimum = 0.2, 
+       esize = 0.05, 
+       labels = feature_data$Number,
+       layout = "spring",  
+       label.cex = 1.5,
+       vsize = 3,
+       groups = feature_groups, 
+       legend = T, 
+       legend.cex = 1,
+       label.scale.equal = T)
+
+```
+
+# Variable codes
+
+```{r, fig.width=15}
+kable(feature_data[c("Number", "Feature", "Main category", "Sub-category")])
+```
