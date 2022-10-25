@@ -59,13 +59,17 @@ qgraph(CorMat, title = "Correlation network",
        vsize = 3,
        groups = feature_groups, 
        legend = T, 
-       legend.cex = 1,
-       label.scale.equal = T)
+       legend.cex = 0.5,
+       label.scale.equal = T, 
+       filename="./out/CorrelationNetwork", 
+       filetype="pdf")
 
 ```
 
 # Variable codes
 
 ```{r, fig.width=15}
-kable(feature_data[c("Number", "Feature", "Main category", "Sub-category")])
+feature_mat = feature_data[c("Number", "Feature", "Main category", "Sub-category")]
+kable(feature_mat)
+write.csv(feature_mat, file = "./out/FeatureList.csv", row.names = F)
 ```
