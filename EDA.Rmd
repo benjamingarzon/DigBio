@@ -5,8 +5,8 @@ output: html_notebook
 
 ```{r}
 # Modify these file paths
-DATA_FILE = 'C:/Users/Garzon/Documents/Projects/DigBio/data/s2/Participant_1_converted.csv'
-FEAT_FILE = 'C:/Users/Garzon/Documents/Projects/DigBio/data/Features.xlsx'
+DATA_FILE = './data/s2/Participant_1_converted.csv'
+FEAT_FILE = './data/Features.xlsx'
 ```
 
 
