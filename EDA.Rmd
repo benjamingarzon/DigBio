@@ -5,20 +5,24 @@ output: html_notebook
 
 ```{r}
 # Modify these file paths
-DATA_FILE = './data/s2/Participant_1_converted.csv'
-FEAT_FILE = './data/Features.xlsx'
+PARTICIPANT=2
+DATA_FILE = sprintf('./data/s%s/Participant_%s_merged.csv', PARTICIPANT, PARTICIPANT)
+FEAT_FILE = './data/Features_merged.xlsx'
+NET_FILE = sprintf('./out/CorrelationNetwork_%s.csv', PARTICIPANT)
+CORS_FILE = sprintf('./out/Correlations_%s.csv', PARTICIPANT)
+
 ```
 
 
 ```{r, echo=FALSE, message=FALSE, results='hide'}
-list.of.packages <- c("readxl", "qgraph","dplyr", "knitr")
+list.of.packages <- c("readxl", "qgraph","dplyr", "knitr","ggplot2")
 
 new.packages <-
   list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])]
 if (length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, require, character.only = TRUE)
 
-mydata = read.csv(DATA_FILE)
+mydata = read.csv(DATA_FILE, sep=",")
 mydata = mydata %>% select(order(colnames(mydata)))
 feature_data = read_xlsx(FEAT_FILE)
 toremove = c("calendar_date", 
@@ -31,7 +35,7 @@ toremove = c("calendar_date",
 # remove constant features
 X = mydata
 X[toremove] = NULL
-sds = apply(X, 2, sd)
+sds = apply(X, 2, sd, na.rm=T)
 X = X[sds != 0]
 
 feature_data$Feature = gsub('%', 'X.', feature_data$Feature)
@@ -50,9 +54,9 @@ feature_groups = feature_data$label
 ```{r, fig.width=15}
 qgraph(CorMat, title = "Correlation network",
        maximum = 1, 
-       cut = 0.2, 
-       minimum = 0.2, 
-       esize = 0.05, 
+       cut = 0.3, 
+       minimum = 0.3, 
+       esize = 0.02, 
        labels = feature_data$Number,
        layout = "spring",  
        label.cex = 1.5,
@@ -61,7 +65,7 @@ qgraph(CorMat, title = "Correlation network",
        legend = T, 
        legend.cex = 0.5,
        label.scale.equal = T, 
-       filename="./out/CorrelationNetwork", 
+       filename=NET_FILE, 
        filetype="pdf")
 
 ```
@@ -73,3 +77,71 @@ feature_mat = feature_data[c("Number", "Feature", "Main category", "Sub-category
 kable(feature_mat)
 write.csv(feature_mat, file = "./out/FeatureList.csv", row.names = F)
 ```
+
+
+```{r}
+NBINS = 30
+cols = c("bad_sleep_score_outlier_binary", "bad_sleep_outlier_binary", "sleep_quality_score", "perceived_sleep_duration", "perceived_sleep_quality", "feeling_rested", "below_mean_sleep_binary")
+
+cors.1 = abs(CorMat[, "sleep_quality_score"])
+cors.2 = abs(CorMat[, "perceived_sleep_quality"])
+
+cors.1 = cors.1[which(!colnames(CorMat) %in% cols)]
+cors.2 = cors.2[which(!colnames(CorMat) %in% cols)]
+
+hist(cors.1, NBINS, col=rgb(0,1,0,0.5), ylim=c(0,30))
+hist(cors.2, NBINS, col=rgb(1,0,0,0.5), add=T)
+hist(cors.1 - cors.2, NBINS)
+t.test(cors.1, cors.2)
+t.test(cors.1, cors.2)
+plot(cors.1, cors.2, asp=1)
+abline(0,1, col="red")
+
+#hist(cors.1[cors.1<1], 50, col=rgb(0,1,0,0.5), ylim=c(0,30))
+#hist(cors.2[cors.2<1], 50, col=rgb(1,0,0,0.5), add=T)
+#hist(cors.1[cors.1<0.8] - cors.2[cors.1<0.8], 50)
+#t.test(cors.1[cors.1<0.8], cors.2[cors.2<0.8])
+#t.test(cors.1[cors.1<0.8], cors.2[cors.1<0.8])
+#plot(cors.1[cors.1<0.8], cors.2[cors.1<0.8], asp=1)
+#abline(0,1, col="red")
+```
+```{r, fig.width=25}
+
+CorMat.2 = CorMat[, which(!colnames(CorMat) %in% cols)]
+
+ff = function(xname){
+  estimate = apply(X, 2, function(q) cor.test(q, X[,xname])$estimate)
+  pvalue = apply(X, 2, function(q) cor.test(q, X[,xname])$p.value)
+  result = data.frame("name" = xname, 
+                      "feature" = colnames(X), 
+                      "correlation" = round(estimate, 3), 
+                      "pvalue" = round(pvalue, 3), row.names = NULL) %>% arrange(-abs(correlation)) %>% filter(!feature %in% cols & pvalue < 0.05)
+  
+  par(mfcol = c(2, 4))
+  #hist(X[, xname], NBINS, main="", xlab = xname)
+  
+  for (feature in result$feature){
+
+     hist(X[, feature], NBINS, main="", xlab = feature, cex = 2, cex.lab=1.5, cex.axis=2)
+    
+     if (length(unique(X[, xname])) == 2) {
+        boxplot(X[, feature] ~ X[, xname], main="", xlab = xname, ylab = feature, cex = 2, cex.lab=1.5, cex.axis=2, pch=20)
+     } else {
+        plot(X[, xname], X[, feature], main="", xlab = xname, ylab = feature, cex = 2, cex.lab=1.5, cex.axis=2, pch=20)
+     }
+  }
+  print(result)
+  return(result)
+}
+
+result.1 = ff("sleep_quality_score")
+result.2 = ff("perceived_sleep_quality")
+result.3 = ff("bad_sleep_outlier_binary")
+result.4 = ff("bad_sleep_score_outlier_binary")
+
+result = rbind(result.1, result.2, result.3, result.4)
+
+write.csv(result, file=CORS_FILE)
+
+```
+

@@ -25,6 +25,7 @@ def read_hr_file(filename):
     
 def compute_metrics(cm):    
     tn, fp, fn, tp = cm.ravel()
+    print("tn = ", tn, ", fp = ", fp, ", fn = ", fn, ", tp = ", tp)
     pos = tp+fn
     neg = tn+fp
     precision = tp/(tp+fp)
